@@ -23,6 +23,14 @@ type PostgresDomainInspector = {
 export class PostgresIntrospector extends Introspector<PostgresDB> {
   readonly adapter: PostgresAdapter;
 
+  private readonly POSTGIS_SYSTEM_TABLES = new Set([
+    'geography_columns',
+    'geometry_columns',
+    'spatial_ref_sys',
+  ]);
+
+  private readonly POSTGIS_SCHEMAS = new Set(['tiger', 'topology']);
+
   constructor(adapter: PostgresAdapter) {
     super();
     this.adapter = adapter;
@@ -126,10 +134,18 @@ export class PostgresIntrospector extends Introspector<PostgresDB> {
 
   async introspect(options: IntrospectOptions<PostgresDB>) {
     const tables = await this.getTables(options);
+
+    const filteredTables = tables.filter(({ name, schema }) => {
+      if (schema === 'public' && this.POSTGIS_SYSTEM_TABLES.has(name)) return false;
+      if (schema && this.POSTGIS_SCHEMAS.has(schema)) return false;
+
+      return true;
+    });
+
     const [enums, domains] = await Promise.all([
       this.#introspectEnums(options.db),
       this.#introspectDomains(options.db),
     ]);
-    return this.#createDatabaseMetadata(tables, enums, domains);
+    return this.#createDatabaseMetadata(filteredTables, enums, domains);
   }
 }
