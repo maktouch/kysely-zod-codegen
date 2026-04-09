@@ -89,6 +89,14 @@ export class Serializer {
     return undefined;
   }
 
+  isStringLiteralUnion(node: UnionExpressionNode): boolean {
+    if (!node.args.length) return false;
+
+    return node.args.every(
+      (arg) => arg.type === NodeType.LITERAL && typeof arg.value === 'string',
+    );
+  }
+
   isSerializableToZod(node: ExpressionNode, allNodes?: StatementNode[]): boolean {
     switch (node.type) {
       case NodeType.OBJECT_EXPRESSION:
@@ -114,6 +122,7 @@ export class Serializer {
       case NodeType.LITERAL:
         return true;
       case NodeType.UNION_EXPRESSION:
+        return this.isStringLiteralUnion(node as UnionExpressionNode);
       case NodeType.GENERIC_EXPRESSION:
       case NodeType.EXTENDS_CLAUSE:
       case NodeType.MAPPED_TYPE:
